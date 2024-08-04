@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Bicycle Route Navigation</title>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCnbw-OeDr5P5qsEtokjbX1QwCJulnFkgE&libraries=geometry,places"></script>
+<style>
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div>
+<input id="start" type="text" placeholder="Enter start location">
+<input id="end" type="text" placeholder="Enter end location">
+<button onclick="calculateAndDisplayRoute()">Get Route</button>
+</div>
+<script>
+        let map;
+        let directionsService;
+        let directionsRenderer;
+ 
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: -37.79222994900859, lng: 144.94940742049585 },
+                zoom: 14,
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer();
+            directionsRenderer.setMap(map);
+ 
+            loadBicycleRoutes();
+        }
+ 
+        function loadBicycleRoutes() {
+            Papa.parse("bicycle-routes-including-informal-on-road-and-off-road-routes.csv", {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    results.data.forEach(route => {
+                        const geoShape = JSON.parse(route["Geo Shape"]);
+                        const coordinates = geoShape.coordinates.map(coord => ({ lat: coord[1], lng: coord[0] }));
+ 
+                        const bikeRoute = new google.maps.Polyline({
+                            path: coordinates,
+                            geodesic: true,
+                            strokeColor: '#FF0000',
+                            strokeOpacity: 1.0,
+                            strokeWeight: 2,
+                        });
+                        bikeRoute.setMap(map);
+ 
+                        const geoPointCoords = route["Geo Point"].split(',').map(Number);
+                        const marker = new google.maps.Marker({
+                            position: { lat: geoPointCoords[0], lng: geoPointCoords[1] },
+                            map: map,
+                            title: route.name,
+                        });
+ 
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: `
+<h3>${route.name}</h3>
+<p>${route.info}</p>
+<p>Status: ${route.status}</p>
+<p>Notes: ${route.notes}</p>
+                            `,
+                        });
+ 
+                        marker.addListener('click', () => {
+                            infoWindow.open(map, marker);
+                        });
+                    });
+                }
+            });
+        }
+ 
+        function calculateAndDisplayRoute() {
+            const start = document.getElementById('start').value;
+            const end = document.getElementById('end').value;
+            directionsService.route(
+                {
+                    origin: start,
+                    destination: end,
+                    travelMode: 'BICYCLING',
+                },
+                (response, status) => {
+                    if (status === 'OK') {
+                        directionsRenderer.setDirections(response);
+                    } else {
+                        window.alert('Directions request failed due to ' + status);
+                    }
+                }
+            );
+        }
+ 
+        window.initMap = initMap;
+</script>
+</body>
+</html>

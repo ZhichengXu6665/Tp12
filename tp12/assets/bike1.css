@@ -1,0 +1,107 @@
+/* General page styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f2;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* Navbar specific styles */
+.navbar {
+    background-color: #264653;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-link {
+    color: #fff;
+    font-size: 1.2rem;
+    transition: color 0.3s;
+}
+
+.nav-link:hover, .nav-link:focus {
+    color: #2a9d8f;
+}
+
+/* Heading styles */
+h1 {
+    color: #2a9d8f;
+    margin: 20px 0 10px 0;
+    text-align: left;
+}
+
+/* Content specific styles */
+.content {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+}
+
+.text-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-left: 20px;
+    height: 100%;
+}
+
+.image-section {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.image-section img {
+    max-width: 80%;
+    height: auto;
+}
+
+.image-with-caption, .cycle-image {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Button styles */
+/* Button styles */
+.button, .dbc-button {
+    background-color: #2a9d8f; /* Primary button color */
+    color: white;
+    padding: 10px 20px; /* Comfortable padding */
+    border-radius: 25px; /* Rounded edges */
+    text-transform: uppercase; /* Uppercase text */
+    font-weight: bold; /* Bold font */
+    width: 50%; /* Adjusted width */
+    max-width: 200px; /* Maximum width */
+    margin: 20px auto; /* Center align and space above */
+    transition: background-color 0.3s; /* Smooth transition for color change */
+    display: block; /* Block display to respect width and margin settings */
+}
+
+.button:hover, .dbc-button:hover {
+    background-color: #264653; /* Change color on hover */
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar {
+        flex-direction: column;
+    }
+
+    .text-section, .image-section {
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+    }
+
+    .button, .dbc-button {
+        width: 100%;
+    }
+}
