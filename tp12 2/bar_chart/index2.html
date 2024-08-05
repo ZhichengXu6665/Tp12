@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accident Data Visualization</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 400px; /* Adjust map height */
+            width: 100%;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+        }
+        select {
+            margin: 20px 0;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="container">
+        <label for="lgaDropdown">Select LGA:</label>
+        <select id="lgaDropdown">
+            <option value="">Select an LGA</option>
+        </select>
+        <canvas id="myBarChart"></canvas>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+    <script>
+        // Initialize the map with a specific view and zoom level
+        const map = L.map('map', {
+            center: [-37.8104, 144.9628], // Center coordinates
+            zoom: 11,
+            minZoom: 7, // Set the minimum zoom level
+            maxBounds: [
+                [-44.0, 113.0], // South-West coordinates of Australia
+                [-10.0, 153.0]  // North-East coordinates of Australia
+            ],
+            maxBoundsViscosity: 1.0 // Prevent map from being dragged outside bounds
+        });
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Define color scale based on ACCIDENT_NO
+        const colorScale = d3.scaleLinear()
+            .domain([0, 1000, 5000, 10000]) // Adjust domain based on your data
+            .range(["lightcoral", "red", "darkred", "maroon"]);
+
+        // Function to style each feature based on ACCIDENT_NO
+        function styleFeature(feature) {
+            return {
+                color: "black",
+                weight: 1,
+                opacity: 1,
+                fillColor: colorScale(feature.properties.ACCIDENT_NO),
+                fillOpacity: 0.7
+            };
+        }
+
+        // Function to bind a tooltip to each feature
+        function onEachFeature(feature, layer) {
+            if (feature.properties && feature.properties.LGA_NAME20 && feature.properties.ACCIDENT_NO) {
+                const tooltipContent = `<strong>${feature.properties.LGA_NAME20}</strong><br>ACCIDENT_NO: ${feature.properties.ACCIDENT_NO}`;
+                layer.bindTooltip(tooltipContent, {permanent: false, direction: 'auto'});
+            }
+        }
+
+        // Load GeoJSON from local server for map
+        fetch('http://localhost:8001/accident_lga.geojson')
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: styleFeature,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+            })
+            .catch(error => console.error('Error loading GeoJSON:', error));
+
+        // Fetch JSON data for the chart
+        fetch('http://localhost:8001/accident_severity.json')
+            .then(response => response.json())
+            .then(data => {
+                // Prepare LGA dropdown options
+                const lgaDropdown = document.getElementById('lgaDropdown');
+                const lgaNames = [...new Set(data.map(item => item.LGA_NAME))];
+                lgaNames.forEach(lga => {
+                    const option = document.createElement('option');
+                    option.value = lga;
+                    option.textContent = lga;
+                    lgaDropdown.appendChild(option);
+                });
+
+                // Set default value to "ALPINE"
+                lgaDropdown.value = "ALPINE";
+
+                // Create the chart
+                const ctx = document.getElementById('myBarChart').getContext('2d');
+                const myBarChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Number of Accidents',
+                            data: [],
+                            backgroundColor: [], // Background colors for each bar
+                            borderColor: 'rgba(255, 99, 132, 1)', // Red color
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Severity'
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Accidents'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Function to update chart based on selected LGA
+                const updateChart = (selectedLGA) => {
+                    if (selectedLGA) {
+                        const filteredData = data.filter(item => item.LGA_NAME === selectedLGA);
+                        
+                        // Map severities to labels
+                        const severityLabels = {
+                            1: "Mild",
+                            2: "Severe",
+                            3: "Fatal"
+                        };
+                        
+                        const severityData = Object.keys(severityLabels).map(severity =>
+                            filteredData.filter(item => item.SEVERITY == severity).reduce((acc, cur) => acc + cur.ACCIDENT_NO, 0)
+                        );
+                        
+                        const backgroundColors = Object.keys(severityLabels).map(severity => `rgba(255, 99, 132, ${0.2 + (severity - 1) * 0.3})`);
+
+                        myBarChart.data.labels = Object.values(severityLabels);
+                        myBarChart.data.datasets[0].data = severityData;
+                        myBarChart.data.datasets[0].backgroundColor = backgroundColors;
+                        myBarChart.update();
+                    } else {
+                        myBarChart.data.labels = [];
+                        myBarChart.data.datasets[0].data = [];
+                        myBarChart.data.datasets[0].backgroundColor = [];
+                        myBarChart.update();
+                    }
+                };
+
+                // Initial update with default value
+                updateChart(lgaDropdown.value);
+
+                // Update chart data based on selected LGA
+                lgaDropdown.addEventListener('change', (event) => {
+                    updateChart(event.target.value);
+                });
+            })
+            .catch(error => console.error('Error loading JSON data:', error));
+    </script>
+</body>
+</html>
